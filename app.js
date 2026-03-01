@@ -749,8 +749,8 @@ async function init() {
   // Conectar Firebase y cargar datos
   initializeFirebase();
 
-  // Auto-guardado en Firebase cada 30 segundos
-  autoSaveInterval = setInterval(autoSave, 30000);
+  // Auto-guardado en Firebase cada 5 segundos
+  autoSaveInterval = setInterval(autoSave, 5000);
 
   // Guardar en Firebase antes de cerrar la página
   window.addEventListener("beforeunload", () => {
