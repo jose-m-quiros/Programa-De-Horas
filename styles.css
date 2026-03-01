@@ -1,0 +1,773 @@
+/* ============================================
+   Control de Horas - Estilos v3
+   Navegación por día
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  min-height: 100vh;
+  padding: 15px;
+  color: #f1f5f9;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+h1 {
+  text-align: center;
+  color: #f1f5f9;
+  margin-bottom: 20px;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+/* ============================================
+   Navegador de Días
+   ============================================ */
+.day-navigator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  user-select: none;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.nav-btn:active {
+  transform: scale(0.95);
+}
+
+.nav-center {
+  text-align: center;
+  color: white;
+}
+
+.nav-day-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.nav-date {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.nav-week-label {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+/* Indicador de días (bolitas) */
+.week-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.week-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1e293b;
+  border: 2px solid #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.week-dot:hover {
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.week-dot.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+
+.week-dot.has-data {
+  border-color: #34d399;
+  color: #34d399;
+}
+
+.week-dot.has-data.active {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+}
+
+.week-dot.today {
+  border-width: 3px;
+  border-color: #fbbf24;
+}
+
+.week-dot.today.active {
+  border-color: #fbbf24;
+}
+
+/* ============================================
+   Tarjetas de Empleados (una por empleado, un día)
+   ============================================ */
+.employee-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  margin-bottom: 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.employee-card.boss {
+  border-color: #fbbf24;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.15);
+}
+
+.employee-header {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.employee-card.boss .employee-header {
+  background: linear-gradient(135deg, #d97706, #fbbf24);
+}
+
+.employee-header:hover {
+  opacity: 0.9;
+}
+
+.employee-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.employee-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.employee-details h3 {
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+}
+
+.employee-role {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.employee-header-right {
+  text-align: right;
+}
+
+.employee-day-total {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #93c5fd;
+}
+
+.employee-week-total {
+  font-size: 0.85rem;
+  color: #34d399;
+  margin-top: 2px;
+}
+
+/* Contenido expandible */
+.employee-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+
+.employee-content.expanded {
+  max-height: 400px;
+}
+
+.employee-body {
+  padding: 18px;
+}
+
+.time-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.time-group {
+  flex: 1;
+}
+
+.time-group label {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.time-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #475569;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f1f5f9;
+  font-size: 1.1rem;
+  transition: border-color 0.3s;
+}
+
+.time-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.day-hours-display {
+  text-align: center;
+  padding: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  font-weight: bold;
+  color: #60a5fa;
+  font-size: 1.1rem;
+}
+
+/* Mini resumen semanal dentro de la tarjeta */
+.employee-mini-summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: rgba(15, 23, 42, 0.5);
+  border-top: 1px solid rgba(59, 130, 246, 0.15);
+  font-size: 0.85rem;
+}
+
+.mini-stat {
+  text-align: center;
+}
+
+.mini-stat-value {
+  font-weight: 700;
+  color: #60a5fa;
+  font-size: 1rem;
+}
+
+.mini-stat-label {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.employee-card.boss .mini-stat-value {
+  color: #fbbf24;
+}
+
+/* ============================================
+   Resumen Semanal
+   ============================================ */
+.weekly-summary {
+  background: #0f172a;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 18px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.weekly-summary h3 {
+  color: #60a5fa;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+/* Tabla resumen semanal */
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.summary-table thead th {
+  padding: 10px 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 2px solid #334155;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.summary-table thead th:first-child {
+  text-align: left;
+  width: 40%;
+}
+.summary-table thead th:nth-child(2) {
+  text-align: center;
+  width: 20%;
+}
+.summary-table thead th:nth-child(3) {
+  text-align: center;
+  width: 15%;
+}
+.summary-table thead th:last-child {
+  text-align: right;
+  width: 25%;
+}
+
+.summary-table tbody td {
+  padding: 11px 8px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.summary-table tbody tr {
+  background: #1e293b;
+  transition: background 0.2s;
+}
+
+.summary-table tbody tr:nth-child(even) {
+  background: #172033;
+}
+
+.summary-table tbody tr:hover {
+  background: #334155;
+}
+
+.summary-table tbody tr.row-boss {
+  background: rgba(251, 191, 36, 0.07);
+}
+
+.summary-table tbody tr.row-boss:hover {
+  background: rgba(251, 191, 36, 0.14);
+}
+
+/* Celdas del body */
+.summary-table tbody td:first-child {
+  text-align: left;
+  color: #e2e8f0;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.summary-table tbody td:nth-child(2) {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.summary-table tbody td:nth-child(3) {
+  text-align: center;
+  color: #60a5fa;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.summary-table tbody td:last-child {
+  text-align: right;
+  color: #34d399;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.tbl-avatar {
+  margin-right: 6px;
+}
+
+/* Fila total */
+.summary-table tfoot td {
+  padding: 13px 8px;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  border-top: 2px solid #3b82f6;
+}
+
+.summary-table tfoot td:first-child {
+  text-align: left;
+}
+.summary-table tfoot td:nth-child(2) {
+  text-align: center;
+}
+.summary-table tfoot td:last-child {
+  text-align: right;
+  font-size: 1.1rem;
+}
+
+/* ============================================
+   Barra de Estado
+   ============================================ */
+.status-bar {
+  background: #0f172a;
+  padding: 8px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auto-save-status {
+  color: #10b981;
+  font-weight: 500;
+}
+.last-saved {
+  color: #cbd5e1;
+}
+
+.cloud-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.cloud-status.connected {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+.cloud-status.disconnected {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+.cloud-status.syncing {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.cloud-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+.cloud-status.syncing .cloud-dot {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ============================================
+   Notificaciones
+   ============================================ */
+.reset-notification {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: 500;
+  display: none;
+  animation: slideDown 0.5s ease-out;
+}
+
+.reset-notification.show {
+  display: block;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 500;
+  z-index: 10000;
+  animation: toastIn 0.4s ease-out;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  max-width: 360px;
+  font-size: 0.9rem;
+}
+
+.toast.success {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+.toast.error {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+.toast.info {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+.toast.hide {
+  animation: toastOut 0.4s ease-in forwards;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+}
+
+/* ============================================
+   Acciones
+   ============================================ */
+.global-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.action-btn {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+}
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.action-btn.danger {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.action-btn.success {
+  background: linear-gradient(135deg, #059669, #10b981);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+/* ============================================
+   Modal
+   ============================================ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 15px;
+  padding: 25px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.modal-content h2 {
+  color: #f1f5f9;
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.modal-actions .btn-save {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+  h1 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+  }
+
+  .day-navigator {
+    padding: 12px 15px;
+  }
+  .nav-day-name {
+    font-size: 1.2rem;
+  }
+  .nav-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .week-dot {
+    width: 32px;
+    height: 32px;
+    font-size: 0.65rem;
+  }
+
+  .employee-details h3 {
+    font-size: 1rem;
+  }
+
+  .time-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .global-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .toast {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: none;
+  }
+
+  .status-bar {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .summary-row {
+    flex-direction: column;
+    gap: 5px;
+    text-align: center;
+  }
+}

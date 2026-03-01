@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Registro Multi-Empleados</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>👥 Control de Horas</h1>
+
+      <!-- Notificación de reinicio -->
+      <div class="reset-notification" id="resetNotification">
+        🔄 ¡Nueva semana iniciada automáticamente!
+      </div>
+
+      <!-- Barra de estado -->
+      <div class="status-bar">
+        <div class="auto-save-status" id="autoSaveStatus">
+          🟢 Auto-guardado activado
+        </div>
+        <div class="cloud-status disconnected" id="cloudStatus">
+          <span class="cloud-dot"></span> Nube no configurada
+        </div>
+        <div class="last-saved" id="lastSaved">Último guardado: Nunca</div>
+      </div>
+
+      <!-- Navegador de días -->
+      <div class="day-navigator">
+        <button class="nav-btn" id="prevDay" onclick="navigateDay(-1)">
+          ◀
+        </button>
+        <div class="nav-center">
+          <div class="nav-day-name" id="currentDayName">Lunes</div>
+          <div class="nav-date" id="currentDate">1 de Marzo</div>
+          <div class="nav-week-label" id="weekLabel">Semana: 1 Mar - 7 Mar</div>
+        </div>
+        <button class="nav-btn" id="nextDay" onclick="navigateDay(1)">▶</button>
+      </div>
+
+      <!-- Indicador de días de la semana -->
+      <div class="week-dots" id="weekDots"></div>
+
+      <!-- Contenedor de empleados (solo el día actual) -->
+      <div id="employeesContainer"></div>
+
+      <!-- Resumen semanal compacto -->
+      <div class="weekly-summary" id="weeklySummary">
+        <h3>📊 Resumen Semanal</h3>
+        <div id="summaryContent"></div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="global-actions">
+        <button class="action-btn" onclick="manualSave()">💾 Guardar</button>
+        <button class="action-btn danger" onclick="clearAllData()">
+          🗑️ Limpiar Semana
+        </button>
+      </div>
+    </div>
+
+    <!-- Selector de semana oculto -->
+    <input type="date" id="weekStart" style="display: none" />
+
+    <script src="app.js"></script>
+  </body>
+</html>
