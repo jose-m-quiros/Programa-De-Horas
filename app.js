@@ -843,184 +843,108 @@ function renderAll() {
 function generateWeeklyReport() {
   collectCurrentDayFromDOM();
 
-  // Formato de montos: entero sin decimales, separador miles es-CR
   function fmt(num) {
-    return "\u20A1" + Math.round(num).toLocaleString("es-CR");
+    return '\u20A1' + Math.round(num).toLocaleString('es-CR');
   }
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  const monday = getMondayOfWeek(getNowCostaRica());
-  const sunday = new Date(monday);
+  const monday   = getMondayOfWeek(getNowCostaRica());
+  const sunday   = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  const weekLabel = formatDate(monday) + " - " + formatDate(sunday);
+  const weekLabel = formatDate(monday) + ' - ' + formatDate(sunday);
 
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 14;
-  const contentW = pageW - margin * 2;
-  let y = margin;
+  let grandTotal = 0, grandHours = 0, cardsHTML = '';
 
-  // Encabezado azul
-  doc.setFillColor(30, 64, 175);
-  doc.roundedRect(margin, y, contentW, 22, 3, 3, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Reporte de Planilla Semanal", margin + 5, y + 9);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("Semana: " + weekLabel, margin + 5, y + 17);
-  y += 27;
-
-  let grandTotal = 0;
-  let grandHours = 0;
-
-  EMPLOYEES.forEach((emp) => {
+  EMPLOYEES.forEach(function(emp) {
     const weekHrs = getWeekTotals(emp.id);
-    const salary = weekHrs * emp.rate;
+    const salary  = weekHrs * emp.rate;
     if (weekHrs === 0) return;
     grandTotal += salary;
     grandHours += weekHrs;
 
-    const rows = [];
+    let rows = '';
     for (let d = 0; d < 7; d++) {
-      const dayData = weekData[emp.id] && weekData[emp.id][d];
-      const dayHrs = getDayHours(emp.id, d);
-      if (dayHrs > 0 || (dayData && (dayData.entry || dayData.exit))) {
-        rows.push([
-          DAY_NAMES[d],
-          dayData ? (dayData.entry || "--") : "--",
-          dayData ? (dayData.exit  || "--") : "--",
-          dayHrs.toFixed(1) + " hrs",
-        ]);
+      const dd   = weekData[emp.id] && weekData[emp.id][d];
+      const hrs  = getDayHours(emp.id, d);
+      if (hrs > 0 || (dd && (dd.entry || dd.exit))) {
+        rows += '<tr>'
+          + '<td class="dc">' + DAY_NAMES[d] + '</td>'
+          + '<td class="tc">' + (dd ? dd.entry || '--' : '--') + '</td>'
+          + '<td class="tc">' + (dd ? dd.exit  || '--' : '--') + '</td>'
+          + '<td class="hr">' + hrs.toFixed(1) + ' hrs</td>'
+          + '</tr>';
       }
     }
 
-    const blockH = 10 + rows.length * 8 + 10;
-    if (y + blockH > doc.internal.pageSize.getHeight() - margin) {
-      doc.addPage();
-      y = margin;
-    }
-
-    // Cabecera del empleado
-    const headerColor = emp.isBoss ? [217, 119, 6] : [30, 64, 175];
-    doc.setFillColor(...headerColor);
-    doc.roundedRect(margin, y, contentW, 10, 2, 2, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text(emp.name, margin + 4, y + 7);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(fmt(emp.rate) + "/hr", pageW - margin - 4, y + 7, { align: "right" });
-    y += 10;
-
-    // Cabecera de tabla
-    const colX = [margin, margin + 38, margin + 76, margin + 114];
-    const colW = [38, 38, 38, contentW - 114];
-    doc.setFillColor(241, 245, 249);
-    doc.rect(margin, y, contentW, 7, "F");
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    ["DIA", "ENTRADA", "SALIDA", "HORAS"].forEach((h, i) => {
-      const align = i === 3 ? "right" : i === 0 ? "left" : "center";
-      const tx = i === 3 ? colX[i] + colW[i] - 2 : i === 0 ? colX[i] + 2 : colX[i] + colW[i] / 2;
-      doc.text(h, tx, y + 5, { align });
-    });
-    y += 7;
-
-    // Filas de dias
-    rows.forEach((row, ri) => {
-      const bg = ri % 2 === 0 ? 255 : 248;
-      doc.setFillColor(bg, bg, ri % 2 === 0 ? 255 : 252);
-      doc.rect(margin, y, contentW, 8, "F");
-      doc.setDrawColor(226, 232, 240);
-      doc.line(margin, y + 8, margin + contentW, y + 8);
-      doc.setTextColor(71, 85, 105);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.text(row[0], colX[0] + 2, y + 5.5);
-      doc.text(row[1], colX[1] + colW[1] / 2, y + 5.5, { align: "center" });
-      doc.text(row[2], colX[2] + colW[2] / 2, y + 5.5, { align: "center" });
-      doc.setTextColor(30, 64, 175);
-      doc.setFont("helvetica", "bold");
-      doc.text(row[3], colX[3] + colW[3] - 2, y + 5.5, { align: "right" });
-      y += 8;
-    });
-
-    // Pie del empleado
-    doc.setFillColor(248, 250, 252);
-    doc.rect(margin, y, contentW, 10, "F");
-    doc.setDrawColor(226, 232, 240);
-    doc.line(margin, y, margin + contentW, y);
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("Total: " + weekHrs.toFixed(1) + " hrs", margin + 4, y + 7);
-    doc.setTextColor(5, 150, 105);
-    doc.setFont("helvetica", "bold");
-    doc.text(fmt(salary), pageW - margin - 4, y + 7, { align: "right" });
-    y += 14;
+    const hbg = emp.isBoss ? '#d97706' : '#1e40af';
+    cardsHTML += ''
+      + '<div class="card">'
+      +   '<div class="emp-hdr" style="background:' + hbg + '">'
+      +     '<span>' + emp.name + '</span>'
+      +     '<span>' + fmt(emp.rate) + '/hr</span>'
+      +   '</div>'
+      +   '<table><thead><tr>'
+      +     '<th class="tl">Dia</th><th class="tc">Entrada</th><th class="tc">Salida</th><th class="tr">Horas</th>'
+      +   '</tr></thead><tbody>' + rows + '</tbody></table>'
+      +   '<div class="emp-ftr">'
+      +     '<span>Total: <b>' + weekHrs.toFixed(1) + ' hrs</b></span>'
+      +     '<span class="sal">' + fmt(salary) + '</span>'
+      +   '</div>'
+      + '</div>';
   });
 
-  // Total general
-  if (y + 14 > doc.internal.pageSize.getHeight() - margin) {
-    doc.addPage();
-    y = margin;
+  const now = getNowCostaRica().toLocaleString('es-CR');
+  const html = '<!DOCTYPE html><html lang="es"><head>'
+    + '<meta charset="UTF-8"/>'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1"/>'
+    + '<title>Planilla ' + weekLabel + '</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:Arial,sans-serif;background:#fff;color:#1e293b;padding:20px;font-size:12px}'
+    + '.hdr{background:#1e40af;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:16px}'
+    + '.hdr h1{font-size:16px;font-weight:700;margin-bottom:2px}'
+    + '.hdr p{font-size:11px;opacity:.85}'
+    + '.card{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px;page-break-inside:avoid}'
+    + '.emp-hdr{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;color:#fff;font-weight:700;font-size:12px}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + 'th{background:#f1f5f9;padding:5px 8px;font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;border-bottom:1px solid #e2e8f0}'
+    + 'th.tl{text-align:left}th.tc{text-align:center}th.tr{text-align:right}'
+    + 'td{padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:11px}'
+    + 'td.dc{color:#475569}td.tc{text-align:center;color:#334155}td.hr{text-align:right;color:#1e40af;font-weight:700}'
+    + 'tr:last-child td{border-bottom:none}'
+    + '.emp-ftr{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-top:1px solid #e2e8f0;padding:6px 12px;font-size:11px;color:#64748b}'
+    + '.sal{color:#059669;font-weight:700;font-size:13px}'
+    + '.grand{display:flex;justify-content:space-between;align-items:center;background:#1e40af;color:#fff;border-radius:8px;padding:11px 16px;margin-top:4px}'
+    + '.grand .gl{font-size:13px;font-weight:600}'
+    + '.grand .ga{font-size:15px;font-weight:700}'
+    + '.foot{text-align:right;color:#94a3b8;font-size:9px;margin-top:12px}'
+    + '@media print{'
+    + 'body{padding:10px}'
+    + '.no-print{display:none!important}'
+    + '.card{page-break-inside:avoid}'
+    + '}'
+    + '</style>'
+    + '</head><body>'
+    + '<div class="no-print" style="text-align:center;margin-bottom:16px;">'
+    + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px">⬇️ Guardar como PDF</button>'
+    + '<button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;">✕ Cerrar</button>'
+    + '<p style="margin-top:8px;font-size:11px;color:#64748b;">En el dialogo de impresion elige <b>Guardar como PDF</b></p>'
+    + '</div>'
+    + '<div class="hdr"><h1>Reporte de Planilla Semanal</h1><p>Semana: ' + weekLabel + '</p></div>'
+    + cardsHTML
+    + '<div class="grand"><span class="gl">Total Planilla \u2014 ' + grandHours.toFixed(1) + ' hrs</span><span class="ga">' + fmt(grandTotal) + '</span></div>'
+    + '<p class="foot">Generado el ' + now + ' \u00B7 Control de Horas</p>'
+    + '<script>window.onload=function(){window.print()}<\/script>'
+    + '</body></html>';
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    showToast('Permite ventanas emergentes para generar el PDF', 'error');
+    return;
   }
-  doc.setFillColor(30, 64, 175);
-  doc.roundedRect(margin, y, contentW, 14, 3, 3, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Planilla  -  " + grandHours.toFixed(1) + " hrs", margin + 5, y + 9.5);
-  doc.setFontSize(13);
-  doc.text(fmt(grandTotal), pageW - margin - 5, y + 9.5, { align: "right" });
-  y += 18;
-
-  // Pie de pagina
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    "Generado el " + getNowCostaRica().toLocaleString("es-CR") + "  -  Control de Horas",
-    pageW - margin,
-    y,
-    { align: "right" }
-  );
-
-  // Descarga directa PDF
-  const filename = "planilla_" + weekLabel.replace(/\s/g, "_") + ".pdf";
-  doc.save(filename);
-  showToast("\u2705 PDF descargado: " + filename, "success");
+  win.document.write(html);
+  win.document.close();
 }
 
-
-
-
-async function doShare(weekLabel, grandTotal) {
-  const text = `📊 Reporte Planilla Semanal\n📅 ${weekLabel}\n💰 Total: ₡${grandTotal.toLocaleString()}\n\nGenerado con Control de Horas`;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "Reporte Planilla", text });
-    } catch (e) {
-      if (e.name !== "AbortError") copyToClipboard(text);
-    }
-  } else {
-    copyToClipboard(text);
-  }
-}
-
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    showToast("📋 Resumen copiado al portapapeles", "success");
-  }).catch(() => {
-    showToast("No se pudo compartir", "error");
-  });
-}
 
 function showReportModal(html) {
   const existing = document.querySelector(".modal-overlay");
