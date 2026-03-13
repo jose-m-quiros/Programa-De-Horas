@@ -17,7 +17,7 @@ const EMPLOYEES = [
   },
   {
     id: "employee1",
-    name: "Empleado 1",
+    name: "Alvaro",
     role: "Trabajador",
     rate: 2200,
     emoji: "👷",
