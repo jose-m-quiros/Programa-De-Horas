@@ -843,6 +843,11 @@ function renderAll() {
 function generateWeeklyReport() {
   collectCurrentDayFromDOM();
 
+  // Formatea montos: entero, separador de miles local es-CR, sin decimales
+  function fmtMonto(num) {
+    return Math.round(num).toLocaleString("es-CR");
+  }
+
   const monday = getMondayOfWeek(getNowCostaRica());
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
@@ -881,7 +886,7 @@ function generateWeeklyReport() {
       <div class="emp-card">
         <div class="emp-top" style="background:${bgColor};">
           <span class="name">${emp.name}</span>
-          <span class="rate">&#8353;${emp.rate.toLocaleString("es-CR")}/hr</span>
+          <span class="rate">\u20A1${Math.round(emp.rate).toLocaleString("es-CR")}/hr</span>
         </div>
         ${diasRows ? `<table class="hours-table">
           <thead><tr>
@@ -894,14 +899,12 @@ function generateWeeklyReport() {
         </table>` : ""}
         <div class="emp-foot">
           <span class="lbl">Total: <strong>${weekHrs.toFixed(1)} hrs</strong></span>
-          <span class="sal">&#8353;${Math.round(salary).toLocaleString("es-CR")}</span>
+          <span class="sal">\u20A1${fmtMonto(salary)}</span>
         </div>
       </div>`;
   });
 
   // Signo de colon
-
-  // HTML completo para el PDF
 
   // HTML completo para el PDF
   const pdfHTML = `<!DOCTYPE html>
@@ -914,10 +917,10 @@ function generateWeeklyReport() {
     .header { background: #1e40af; color: white; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
     .header h1 { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
     .header p { font-size: 12px; opacity: 0.85; }
-    .emp-card { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
-    .emp-top { display: table; width: 100%; padding: 9px 14px; }
-    .emp-top .name { display: table-cell; color: white; font-weight: 700; font-size: 13px; }
-    .emp-top .rate { display: table-cell; text-align: right; color: white; font-size: 12px; white-space: nowrap; padding-left: 10px; }
+    .emp-card { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; margin-bottom: 16px; page-break-inside: avoid; }
+    .emp-top { display: flex; width: 100%; padding: 9px 14px; align-items: center; justify-content: space-between; }
+    .emp-top .name { color: white; font-weight: 700; font-size: 13px; }
+    .emp-top .rate { color: white; font-size: 12px; white-space: nowrap; padding-left: 10px; text-align: right; }
     .hours-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .hours-table th { background: #f1f5f9; padding: 6px 10px; font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
     .hours-table th.l { text-align: left; width: 28%; }
@@ -928,12 +931,12 @@ function generateWeeklyReport() {
     .hours-table td.time { text-align: center; color: #334155; }
     .hours-table td.hrs { text-align: right; color: #1e40af; font-weight: 600; }
     .hours-table tr:last-child td { border-bottom: none; }
-    .emp-foot { display: table; width: 100%; background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 8px 14px; }
-    .emp-foot .lbl { display: table-cell; color: #64748b; font-size: 12px; }
-    .emp-foot .sal { display: table-cell; text-align: right; color: #059669; font-weight: 700; font-size: 13px; white-space: nowrap; padding-left: 10px; }
-    .grand { display: table; width: 100%; background: #1e40af; color: white; border-radius: 10px; padding: 13px 18px; margin-top: 6px; }
-    .grand .gl { display: table-cell; font-size: 14px; font-weight: 600; }
-    .grand .ga { display: table-cell; text-align: right; font-size: 16px; font-weight: 700; white-space: nowrap; padding-left: 10px; }
+    .emp-foot { display: flex; width: 100%; background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 8px 14px; align-items: center; justify-content: space-between; }
+    .emp-foot .lbl { color: #64748b; font-size: 12px; }
+    .emp-foot .sal { color: #059669; font-weight: 700; font-size: 14px; white-space: nowrap; padding-left: 10px; text-align: right; }
+    .grand { display: flex; width: 100%; background: #1e40af; color: white; border-radius: 10px; padding: 13px 18px; margin-top: 6px; align-items: center; justify-content: space-between; }
+    .grand .gl { font-size: 14px; font-weight: 600; }
+    .grand .ga { font-size: 16px; font-weight: 700; white-space: nowrap; padding-left: 10px; text-align: right; }
     .foot { text-align: right; color: #94a3b8; font-size: 10px; margin-top: 14px; }
   </style>
 </head>
@@ -945,7 +948,7 @@ function generateWeeklyReport() {
   ${pdfBody2}
   <div class="grand">
     <span class="gl">Total Planilla &mdash; ${grandHours.toFixed(1)} hrs</span>
-    <span class="ga">&#8353;${Math.round(grandTotal).toLocaleString("es-CR")}</span>
+    <span class="ga">\u20A1${fmtMonto(grandTotal)}</span>
   </div>
   <p class="foot">Generado el ${getNowCostaRica().toLocaleString("es-CR")} &middot; Control de Horas</p>
 </body>
