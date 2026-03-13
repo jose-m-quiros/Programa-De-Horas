@@ -851,23 +851,124 @@ function generateWeeklyReport() {
   let grandTotal = 0;
   let grandHours = 0;
 
+  // Construir contenido del PDF con clases CSS limpias
+  let pdfBody = "";
+  let pdfBody2 = "";
   EMPLOYEES.forEach((emp) => {
     const weekHrs = getWeekTotals(emp.id);
-    grandTotal += weekHrs * emp.rate;
+    const salary = weekHrs * emp.rate;
+    grandTotal += salary;
     grandHours += weekHrs;
+
+    let diasRows = "";
+    for (let d = 0; d < 7; d++) {
+      const dayData = weekData[emp.id] && weekData[emp.id][d];
+      const dayHrs = getDayHours(emp.id, d);
+      if (dayHrs > 0 || (dayData && (dayData.entry || dayData.exit))) {
+        diasRows += `<tr>
+          <td class="day">${DAY_NAMES[d]}</td>
+          <td class="time">${dayData ? dayData.entry || "--" : "--"}</td>
+          <td class="time">${dayData ? dayData.exit || "--" : "--"}</td>
+          <td class="hrs">${dayHrs.toFixed(1)} hrs</td>
+        </tr>`;
+      }
+    }
+
+    if (weekHrs === 0) return;
+
+    const bgColor = emp.isBoss ? "#d97706" : "#1e40af";
+    pdfBody2 += `
+      <div class="emp-card">
+        <div class="emp-top" style="background:${bgColor};">
+          <span class="name">${emp.name}</span>
+          <span class="rate">&#8353;${emp.rate.toLocaleString("es-CR")}/hr</span>
+        </div>
+        ${diasRows ? `<table class="hours-table">
+          <thead><tr>
+            <th class="l">Dia</th>
+            <th class="c">Entrada</th>
+            <th class="c">Salida</th>
+            <th class="r">Horas</th>
+          </tr></thead>
+          <tbody>${diasRows}</tbody>
+        </table>` : ""}
+        <div class="emp-foot">
+          <span class="lbl">Total: <strong>${weekHrs.toFixed(1)} hrs</strong></span>
+          <span class="sal">&#8353;${Math.round(salary).toLocaleString("es-CR")}</span>
+        </div>
+      </div>`;
   });
 
-  // Mostrar modal con opciones
-  showShareModal(weekLabel, grandTotal, grandHours);
+  // Signo de colon
+
+  // HTML completo para el PDF
+
+  // HTML completo para el PDF
+  const pdfHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; padding: 28px; color: #1e293b; background: white; font-size: 13px; }
+    .header { background: #1e40af; color: white; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+    .header h1 { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
+    .header p { font-size: 12px; opacity: 0.85; }
+    .emp-card { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+    .emp-top { display: table; width: 100%; padding: 9px 14px; }
+    .emp-top .name { display: table-cell; color: white; font-weight: 700; font-size: 13px; }
+    .emp-top .rate { display: table-cell; text-align: right; color: white; font-size: 12px; white-space: nowrap; padding-left: 10px; }
+    .hours-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .hours-table th { background: #f1f5f9; padding: 6px 10px; font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+    .hours-table th.l { text-align: left; width: 28%; }
+    .hours-table th.c { text-align: center; width: 22%; }
+    .hours-table th.r { text-align: right; width: 28%; }
+    .hours-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+    .hours-table td.day { color: #475569; }
+    .hours-table td.time { text-align: center; color: #334155; }
+    .hours-table td.hrs { text-align: right; color: #1e40af; font-weight: 600; }
+    .hours-table tr:last-child td { border-bottom: none; }
+    .emp-foot { display: table; width: 100%; background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 8px 14px; }
+    .emp-foot .lbl { display: table-cell; color: #64748b; font-size: 12px; }
+    .emp-foot .sal { display: table-cell; text-align: right; color: #059669; font-weight: 700; font-size: 13px; white-space: nowrap; padding-left: 10px; }
+    .grand { display: table; width: 100%; background: #1e40af; color: white; border-radius: 10px; padding: 13px 18px; margin-top: 6px; }
+    .grand .gl { display: table-cell; font-size: 14px; font-weight: 600; }
+    .grand .ga { display: table-cell; text-align: right; font-size: 16px; font-weight: 700; white-space: nowrap; padding-left: 10px; }
+    .foot { text-align: right; color: #94a3b8; font-size: 10px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Reporte de Planilla Semanal</h1>
+    <p>Semana: ${weekLabel}</p>
+  </div>
+  ${pdfBody2}
+  <div class="grand">
+    <span class="gl">Total Planilla &mdash; ${grandHours.toFixed(1)} hrs</span>
+    <span class="ga">&#8353;${Math.round(grandTotal).toLocaleString("es-CR")}</span>
+  </div>
+  <p class="foot">Generado el ${getNowCostaRica().toLocaleString("es-CR")} &middot; Control de Horas</p>
+</body>
+</html>`;
+
+  // Abrir ventana para imprimir/exportar PDF y compartir
+  const printWindow = window.open("", "_blank", "width=800,height=700");
+  printWindow.document.write(pdfHTML);
+  printWindow.document.close();
+
+  printWindow.onload = function () {
+    // Mostrar modal con opciones
+    showShareModal(weekLabel, grandTotal, grandHours, printWindow, pdfHTML);
+  };
 }
 
-function showShareModal(weekLabel, grandTotal, grandHours) {
+function showShareModal(weekLabel, grandTotal, grandHours, printWindow, pdfHTML) {
   const existing = document.querySelector(".modal-overlay");
   if (existing) existing.remove();
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); } };
 
   overlay.innerHTML = `
     <div class="modal-content" style="max-width:420px;text-align:center;">
@@ -887,145 +988,28 @@ function showShareModal(weekLabel, grandTotal, grandHours) {
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <button onclick="doPrint('${weekLabel}', EMPLOYEES, weekData);this.closest('.modal-overlay').remove();"
-          style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
-          ⬇️ Descargar PDF
+        <button onclick="doPrint()" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
+          🖨️ Descargar PDF
         </button>
-        <button onclick="doShare('${weekLabel}', ${grandTotal})"
-          style="background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
+        <button onclick="doShare('${weekLabel}', ${grandTotal})" style="background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
           📤 Compartir
         </button>
       </div>
-      <button onclick="this.closest('.modal-overlay').remove();"
+      <button onclick="this.closest('.modal-overlay').remove();if(window._reportWindow)window._reportWindow.close();"
         style="width:100%;background:#334155;color:#94a3b8;border:none;padding:11px;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;">
         Cerrar
       </button>
     </div>`;
 
+  window._reportWindow = printWindow;
   document.body.appendChild(overlay);
 }
 
-function doPrint(weekLabel, employees, weekDataSnap) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  let y = 20;
-
-  // Encabezado
-  doc.setFillColor(30, 64, 175);
-  doc.roundedRect(10, y - 8, pageW - 20, 18, 3, 3, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Reporte de Planilla Semanal", pageW / 2, y, { align: "center" });
-  y += 7;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("Semana: " + weekLabel, pageW / 2, y, { align: "center" });
-  y += 14;
-
-  let grandTotal = 0;
-  let grandHours = 0;
-
-  employees.forEach((emp) => {
-    const empData = weekDataSnap[emp.id];
-    let weekHrs = 0;
-    const rows = [];
-
-    for (let d = 0; d < 7; d++) {
-      const dd = empData && empData[d];
-      const hrs = dd ? calculateHoursBetween(dd.entry, dd.exit) : 0;
-      if (dd && (dd.entry || dd.exit)) {
-        weekHrs += hrs;
-        rows.push([DAY_NAMES[d], dd.entry || "--", dd.exit || "--", hrs.toFixed(1) + " hrs"]);
-      }
-    }
-
-    if (weekHrs === 0) return;
-
-    const salary = weekHrs * emp.rate;
-    grandTotal += salary;
-    grandHours += weekHrs;
-
-    // Verificar espacio en página
-    if (y > 240) { doc.addPage(); y = 20; }
-
-    // Header empleado
-    const headerColor = emp.isBoss ? [217, 119, 6] : [30, 64, 175];
-    doc.setFillColor(...headerColor);
-    doc.roundedRect(10, y, pageW - 20, 9, 2, 2, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text(emp.name, 14, y + 6);
-    doc.text("₡" + emp.rate.toLocaleString() + "/hr", pageW - 14, y + 6, { align: "right" });
-    y += 11;
-
-    // Tabla de días
-    if (rows.length > 0) {
-      // Encabezados tabla
-      doc.setFillColor(248, 250, 252);
-      doc.rect(10, y, pageW - 20, 7, "F");
-      doc.setTextColor(100, 116, 139);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.text("Día", 14, y + 5);
-      doc.text("Entrada", 70, y + 5, { align: "center" });
-      doc.text("Salida", 110, y + 5, { align: "center" });
-      doc.text("Horas", pageW - 14, y + 5, { align: "right" });
-      y += 7;
-
-      // Filas
-      rows.forEach((row, i) => {
-        doc.setFillColor(i % 2 === 0 ? 255 : 250, i % 2 === 0 ? 255 : 250, i % 2 === 0 ? 255 : 252);
-        doc.rect(10, y, pageW - 20, 7, "F");
-        doc.setTextColor(80, 80, 80);
-        doc.setFont("helvetica", "normal");
-        doc.text(row[0], 14, y + 5);
-        doc.text(row[1], 70, y + 5, { align: "center" });
-        doc.text(row[2], 110, y + 5, { align: "center" });
-        doc.setTextColor(30, 64, 175);
-        doc.setFont("helvetica", "bold");
-        doc.text(row[3], pageW - 14, y + 5, { align: "right" });
-        y += 7;
-      });
-    }
-
-    // Footer empleado
-    doc.setFillColor(248, 250, 252);
-    doc.rect(10, y, pageW - 20, 8, "F");
-    doc.setTextColor(80, 80, 80);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("Total: " + weekHrs.toFixed(1) + " hrs", 14, y + 5.5);
-    doc.setTextColor(5, 150, 105);
-    doc.setFont("helvetica", "bold");
-    doc.text("₡" + salary.toLocaleString(), pageW - 14, y + 5.5, { align: "right" });
-    y += 12;
-  });
-
-  // Total general
-  if (y > 250) { doc.addPage(); y = 20; }
-  doc.setFillColor(30, 64, 175);
-  doc.roundedRect(10, y, pageW - 20, 12, 3, 3, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Planilla Semanal  " + grandHours.toFixed(1) + " hrs", 14, y + 8);
-  doc.text("₡" + grandTotal.toLocaleString(), pageW - 14, y + 8, { align: "right" });
-  y += 18;
-
-  // Pie de página
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text("Generado el " + getNowCostaRica().toLocaleString("es-CR") + " · Control de Horas", pageW / 2, y, { align: "center" });
-
-  // Descargar
-  const monday = getMondayOfWeek(getNowCostaRica());
-  const filename = "planilla_" + monday.getFullYear() + "-" + String(monday.getMonth()+1).padStart(2,"0") + "-" + String(monday.getDate()).padStart(2,"0") + ".pdf";
-  doc.save(filename);
+function doPrint() {
+  if (window._reportWindow) {
+    window._reportWindow.focus();
+    window._reportWindow.print();
+  }
 }
 
 async function doShare(weekLabel, grandTotal) {
