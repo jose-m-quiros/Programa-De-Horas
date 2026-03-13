@@ -11,6 +11,9 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- jsPDF para exportar PDF directo -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
     <div class="container">
@@ -34,9 +37,7 @@
 
       <!-- Navegador de días -->
       <div class="day-navigator">
-        <button class="nav-btn" id="prevDay" onclick="navigateDay(-1)">
-          ◀
-        </button>
+        <button class="nav-btn" id="prevDay" onclick="navigateDay(-1)">◀</button>
         <div class="nav-center">
           <div class="nav-day-name" id="currentDayName">Lunes</div>
           <div class="nav-date" id="currentDate">1 de Marzo</div>
@@ -60,9 +61,9 @@
       <!-- Acciones -->
       <div class="global-actions">
         <button class="action-btn" onclick="manualSave()">💾 Guardar</button>
-        <button class="action-btn danger" onclick="clearAllData()">
-          🗑️ Limpiar Semana
-        </button>
+        <button class="action-btn success" onclick="showRatesPanel()">💰 Tarifas</button>
+        <button class="action-btn info" onclick="showBackupsPanel()">🗄️ Backups</button>
+        <button class="action-btn report" onclick="generateWeeklyReport()">📊 Reporte</button>
       </div>
     </div>
 

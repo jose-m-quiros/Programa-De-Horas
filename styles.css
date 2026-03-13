@@ -610,7 +610,7 @@ h1 {
    ============================================ */
 .global-actions {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-top: 15px;
 }
@@ -643,6 +643,16 @@ h1 {
 .action-btn.success {
   background: linear-gradient(135deg, #059669, #10b981);
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.action-btn.info {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+}
+
+.action-btn.report {
+  background: linear-gradient(135deg, #0369a1, #0ea5e9);
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
 }
 
 /* ============================================
@@ -750,7 +760,7 @@ h1 {
   }
 
   .global-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .toast {
