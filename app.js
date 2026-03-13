@@ -856,13 +856,10 @@ function generateWeeklyReport() {
   const weekLabel = formatDate(monday) + ' - ' + formatDate(sunday);
 
   function fmt(n) { return '\u20A1' + Math.round(n).toLocaleString('es-CR'); }
-  function checkPage(need) {
-    if (y + need > H - m) { doc.addPage(); y = m; }
-  }
+  function checkPage(need) { if (y + need > H - m) { doc.addPage(); y = m; } }
 
-  // Encabezado
-  doc.setFillColor(30, 64, 175);
-  doc.roundedRect(m, y, W - m*2, 50, 6, 6, 'F');
+  doc.setFillColor(30,64,175);
+  doc.roundedRect(m, y, W-m*2, 50, 6, 6, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(16);
   doc.text('Reporte de Planilla Semanal', m+14, y+22);
@@ -887,10 +884,8 @@ function generateWeeklyReport() {
       }
     }
 
-    const blockH = 24 + 18 + rows.length*18 + 22;
-    checkPage(blockH);
+    checkPage(24 + 18 + rows.length*18 + 22);
 
-    // Cabecera empleado
     const rgb = emp.isBoss ? [217,119,6] : [30,64,175];
     doc.setFillColor(rgb[0],rgb[1],rgb[2]);
     doc.roundedRect(m, y, W-m*2, 24, 4, 4, 'F');
@@ -901,21 +896,19 @@ function generateWeeklyReport() {
     doc.text(fmt(emp.rate)+'/hr', W-m-10, y+16, {align:'right'});
     y += 24;
 
-    // Encabezado tabla
     doc.setFillColor(241,245,249);
     doc.rect(m, y, W-m*2, 18, 'F');
     doc.setTextColor(100,116,139);
     doc.setFont('helvetica','bold'); doc.setFontSize(8);
     const cw = (W-m*2)/4;
-    doc.text('DIA',       m+6,        y+12);
-    doc.text('ENTRADA',   m+cw*1.5,   y+12, {align:'center'});
-    doc.text('SALIDA',    m+cw*2.5,   y+12, {align:'center'});
-    doc.text('HORAS',     W-m-6,      y+12, {align:'right'});
+    doc.text('DIA', m+6, y+12);
+    doc.text('ENTRADA', m+cw*1.5, y+12, {align:'center'});
+    doc.text('SALIDA',  m+cw*2.5, y+12, {align:'center'});
+    doc.text('HORAS',   W-m-6,    y+12, {align:'right'});
     y += 18;
 
-    // Filas
     rows.forEach(function(r, i) {
-      doc.setFillColor(i%2===0?255:248, i%2===0?255:250, i%2===0?255:252);
+      doc.setFillColor(i%2===0?255:248, i%2===0?255:250, 255);
       doc.rect(m, y, W-m*2, 18, 'F');
       doc.setDrawColor(226,232,240);
       doc.line(m, y+18, W-m, y+18);
@@ -930,7 +923,6 @@ function generateWeeklyReport() {
       y += 18;
     });
 
-    // Pie empleado
     doc.setFillColor(248,250,252);
     doc.rect(m, y, W-m*2, 22, 'F');
     doc.setDrawColor(226,232,240);
@@ -944,7 +936,6 @@ function generateWeeklyReport() {
     y += 30;
   });
 
-  // Total general
   checkPage(36);
   doc.setFillColor(30,64,175);
   doc.roundedRect(m, y, W-m*2, 36, 6, 6, 'F');
@@ -954,9 +945,18 @@ function generateWeeklyReport() {
   doc.setFontSize(14);
   doc.text(fmt(grandTotal), W-m-14, y+22, {align:'right'});
 
+  // Descarga directa sin abrir ventanas
   const filename = 'planilla_'+weekLabel.replace(/\s/g,'_')+'.pdf';
-  doc.save(filename);
-  showToast('PDF descargado correctamente', 'success');
+  const blob = doc.output('blob');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('PDF descargado', 'success');
 }
 
 
