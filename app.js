@@ -864,7 +864,11 @@ function generateWeeklyReport() {
   sunday.setDate(sunday.getDate() + 6);
   const weekLabel = formatDate(monday) + ' - ' + formatDate(sunday);
 
-  function fmt(n) { return '\u20A1' + Math.round(n).toLocaleString('es-CR'); }
+  function fmt(n) {
+    // Espacio como separador de miles - jsPDF no corta en espacios como si hace con puntos
+    var s = Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+    return '\u20A1' + s;
+  }
   function setF(style, size) {
     doc.setFont('DejaVuSans', style);
     doc.setFontSize(size);
