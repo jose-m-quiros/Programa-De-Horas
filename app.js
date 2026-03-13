@@ -954,15 +954,8 @@ function generateWeeklyReport() {
 </body>
 </html>`;
 
-  // Abrir ventana para imprimir/exportar PDF y compartir
-  const printWindow = window.open("", "_blank", "width=800,height=700");
-  printWindow.document.write(pdfHTML);
-  printWindow.document.close();
-
-  printWindow.onload = function () {
-    // Mostrar modal con opciones
-    showShareModal(weekLabel, grandTotal, grandHours, printWindow, pdfHTML);
-  };
+  // Mostrar modal y descargar directamente sin abrir ventana emergente
+  showShareModal(weekLabel, grandTotal, grandHours, null, pdfHTML);
 }
 
 function showShareModal(weekLabel, grandTotal, grandHours, printWindow, pdfHTML) {
@@ -991,8 +984,8 @@ function showShareModal(weekLabel, grandTotal, grandHours, printWindow, pdfHTML)
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <button onclick="doPrint()" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
-          🖨️ Descargar PDF
+        <button onclick="doDownloadPDF()" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
+          ⬇️ Descargar PDF
         </button>
         <button onclick="doShare('${weekLabel}', ${grandTotal})" style="background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;padding:13px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">
           📤 Compartir
@@ -1005,14 +998,28 @@ function showShareModal(weekLabel, grandTotal, grandHours, printWindow, pdfHTML)
     </div>`;
 
   window._reportWindow = printWindow;
+  window._reportHTML = pdfHTML;
+  window._reportWeekLabel = weekLabel;
   document.body.appendChild(overlay);
 }
 
-function doPrint() {
-  if (window._reportWindow) {
-    window._reportWindow.focus();
-    window._reportWindow.print();
-  }
+function doDownloadPDF() {
+  const html = window._reportHTML;
+  const weekLabel = window._reportWeekLabel || "planilla";
+  const filename = "planilla_" + weekLabel.replace(/[\s/\\:]/g, "_") + ".html";
+
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
+  showToast("✅ Reporte descargado", "success");
 }
 
 async function doShare(weekLabel, grandTotal) {
