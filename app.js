@@ -818,8 +818,7 @@ function updateWeeklySummary() {
 
   html += "</tbody>";
   html += "<tfoot><tr>";
-  html += '<td colspan="2">💰 Total Planilla</td>';
-  html += "<td>" + totalHoursGlobal.toFixed(1) + "</td>";
+  html += '<td colspan="3">💰 Total Planilla</td>';
   html += "<td>₡" + totalGlobal.toLocaleString() + "</td>";
   html += "</tr></tfoot>";
   html += "</table>";

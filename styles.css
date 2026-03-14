@@ -724,60 +724,168 @@ h1 {
    Responsive
    ============================================ */
 @media (max-width: 600px) {
-  .container {
-    padding: 12px;
-  }
-  h1 {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
+  body {
+    padding: 8px;
   }
 
+  .container {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+
+  /* Navegador de días */
   .day-navigator {
-    padding: 12px 15px;
+    padding: 10px 12px;
   }
   .nav-day-name {
     font-size: 1.2rem;
+  }
+  .nav-date {
+    font-size: 0.9rem;
+  }
+  .nav-week-label {
+    font-size: 0.72rem;
   }
   .nav-btn {
     width: 40px;
     height: 40px;
     font-size: 1.1rem;
+    flex-shrink: 0;
   }
 
+  /* Dots de la semana */
+  .week-dots {
+    gap: 5px;
+  }
   .week-dot {
-    width: 32px;
-    height: 32px;
-    font-size: 0.65rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.6rem;
   }
 
+  /* Tarjetas de empleados */
+  .employee-header {
+    padding: 10px 12px;
+  }
+  .employee-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 1.1rem;
+  }
+  .employee-info {
+    gap: 8px;
+  }
   .employee-details h3 {
-    font-size: 1rem;
+    font-size: 0.95rem;
+  }
+  .employee-role {
+    font-size: 0.72rem;
+  }
+  .employee-day-total {
+    font-size: 0.95rem;
+  }
+  .employee-week-total {
+    font-size: 0.75rem;
   }
 
+  /* Inputs de tiempo */
+  .employee-body {
+    padding: 12px;
+  }
   .time-row {
     flex-direction: column;
     gap: 8px;
   }
 
-  .global-actions {
-    grid-template-columns: repeat(2, 1fr);
+  /* Tabla resumen — scroll horizontal en móvil */
+  .weekly-summary {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 10px;
+  }
+  .summary-table {
+    table-layout: auto;
+    min-width: 320px;
+    font-size: 0.82rem;
+  }
+  .summary-table thead th {
+    width: auto;
+    padding: 8px 6px;
+    font-size: 0.7rem;
+  }
+  .summary-table tbody td {
+    padding: 9px 6px;
+  }
+  .summary-table tfoot td {
+    font-size: 0.88rem;
+    padding: 10px 6px;
+  }
+  .summary-table tfoot td:last-child {
+    font-size: 0.95rem;
   }
 
+  /* Botones de acción */
+  .global-actions {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .action-btn {
+    padding: 11px 8px;
+    font-size: 0.82rem;
+  }
+
+  /* Toast */
   .toast {
     left: 10px;
     right: 10px;
     bottom: 10px;
     max-width: none;
+    font-size: 0.85rem;
   }
 
+  /* Status bar */
   .status-bar {
     flex-direction: column;
     text-align: center;
+    gap: 5px;
   }
 
-  .summary-row {
+  /* Modal */
+  .modal-content {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .modal-actions {
     flex-direction: column;
-    gap: 5px;
-    text-align: center;
+  }
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+/* Pantallas muy pequeñas (menos de 380px) */
+@media (max-width: 380px) {
+  .week-dot {
+    width: 26px;
+    height: 26px;
+    font-size: 0.55rem;
+  }
+  .week-dots {
+    gap: 4px;
+  }
+  .nav-day-name {
+    font-size: 1.05rem;
+  }
+  .nav-btn {
+    width: 36px;
+    height: 36px;
+  }
+  h1 {
+    font-size: 1.05rem;
   }
 }
