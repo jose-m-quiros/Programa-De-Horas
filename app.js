@@ -95,29 +95,59 @@ let firebaseLoadComplete = false; // ← NUEVO: bloquea auto-save hasta cargar
 let autoSaveInterval = null;
 let expandedCards = {};
 let lastSavedDataStr = null; // ← rastrea el último dato guardado
+let saveInProgress = false;
+let pendingCloudSync = null;
+
+function queuePendingCloudSync(weekKey, data) {
+  pendingCloudSync = {
+    weekKey,
+    data: JSON.parse(JSON.stringify(data)),
+  };
+}
+
+async function flushPendingCloudSync() {
+  if (!db || !firebaseConnected || !pendingCloudSync) return false;
+
+  const snapshot = pendingCloudSync;
+  const synced = await saveToCloud(snapshot.weekKey, snapshot.data);
+  if (synced && pendingCloudSync === snapshot) {
+    pendingCloudSync = null;
+    return true;
+  }
+
+  return false;
+}
 
 // ==========================================
-// Firebase
+// Supabase
 // ==========================================
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCP6yPEuFP4p_mNVjjd25BvFjdJHcy-xs4",
-  authDomain: "programa-horas-trabajo.firebaseapp.com",
-  databaseURL: "https://programa-horas-trabajo-default-rtdb.firebaseio.com",
-  projectId: "programa-horas-trabajo",
-  storageBucket: "programa-horas-trabajo.firebasestorage.app",
-  messagingSenderId: "206495516389",
-  appId: "1:206495516389:web:2dc25103924238c769f60c",
-  measurementId: "G-5T8EFCXQSC",
+const SUPABASE_CONFIG = {
+  url: "https://onucfvatdhlwqilhnena.supabase.co",
+  anonKey: "sb_publishable_uQeHIStd1T2IGyNr7gYsVw_niQ8aMOz",
 };
 
-function initializeFirebase() {
+async function initializeFirebase() {
   try {
-    if (typeof firebase === "undefined") return;
-    firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-    testFirebaseConnection();
+    if (typeof window.supabase === "undefined") return;
+    if (
+      !SUPABASE_CONFIG.url ||
+      SUPABASE_CONFIG.url.includes("TU-PROYECTO") ||
+      !SUPABASE_CONFIG.anonKey ||
+      SUPABASE_CONFIG.anonKey.includes("TU_SUPABASE")
+    ) {
+      firebaseLoadComplete = true;
+      updateCloudStatus("disconnected", "Configura Supabase");
+      return;
+    }
+
+    db = window.supabase.createClient(
+      SUPABASE_CONFIG.url,
+      SUPABASE_CONFIG.anonKey
+    );
+    await testFirebaseConnection();
   } catch (e) {
-    /* silently fail */
+    firebaseLoadComplete = true;
+    updateCloudStatus("disconnected", "Error de configuración");
   }
 }
 
@@ -128,10 +158,25 @@ async function testFirebaseConnection() {
   }
   try {
     updateCloudStatus("syncing", "Conectando...");
-    await db.collection("_test").doc("ping").set({ t: Date.now() });
+
+    const { error } = await db.from("config").select("key").limit(1);
+    if (error) {
+      if (error.code === "PGRST205" || error.message.includes("404")) {
+        firebaseConnected = false;
+        firebaseLoadComplete = true;
+        updateCloudStatus("disconnected", "Falta configurar tablas");
+        showToast(
+          "Supabase no tiene la tabla config. Ejecuta supabase-schema-anon.sql en SQL Editor.",
+          "error"
+        );
+        return;
+      }
+      throw error;
+    }
+
     firebaseConnected = true;
     updateCloudStatus("connected", "Nube conectada");
-    await loadDataFromFirebase();
+    await loadDataFromCloud();
   } catch (e) {
     firebaseConnected = false;
     firebaseLoadComplete = true; // permitir guardar aunque falle
@@ -153,31 +198,44 @@ function updateCloudStatus(status, text) {
 // Se conservan los últimos 50 backups.
 // ==========================================
 async function saveToCloud(key, data) {
-  if (!db || !firebaseConnected) return;
+  if (!db || !firebaseConnected) {
+    queuePendingCloudSync(key, data);
+    return false;
+  }
+
+  if (saveInProgress) {
+    queuePendingCloudSync(key, data);
+    return false;
+  }
+
+  saveInProgress = true;
+
   try {
     const dataStr = JSON.stringify(data);
-    const now = Date.now();
+    const nowIso = new Date().toISOString();
 
     // 1. Guardar datos principales siempre
-    await db.collection("weeks").doc(key).set({
-      data: dataStr,
-      updatedAt: now,
-    });
+    const { error: weekError } = await db.from("weeks").upsert(
+      {
+        week_key: key,
+        data,
+        updated_at: nowIso,
+      },
+      { onConflict: "week_key" }
+    );
+    if (weekError) throw weekError;
 
     // 2. Crear backup SOLO si los datos cambiaron desde el último guardado
     if (dataStr !== lastSavedDataStr) {
       lastSavedDataStr = dataStr;
       updateCloudStatus("syncing", "Creando backup...");
 
-      const backupKey = key + "_backup_" + now;
-      await db.collection("backups").doc(backupKey).set({
-        data: dataStr,
-        weekKey: key,
-        savedAt: now,
-        savedAtReadable: new Date(now).toLocaleString("es-CR", {
-          timeZone: "America/Costa_Rica",
-        }),
+      const { error: backupError } = await db.from("backups").insert({
+        week_key: key,
+        data,
+        saved_at: nowIso,
       });
+      if (backupError) throw backupError;
 
       // 3. Limpiar backups viejos (conservar solo los últimos 50)
       cleanOldBackups(key);
@@ -185,27 +243,39 @@ async function saveToCloud(key, data) {
 
     updateCloudStatus("connected", "Nube sincronizada ✓");
     updateLastSaved();
+    return true;
   } catch (e) {
-    updateCloudStatus("disconnected", "Error al guardar");
+    queuePendingCloudSync(key, data);
+    const msg = String((e && e.message) || "").toLowerCase();
+    if (msg.includes("401") || msg.includes("unauthorized")) {
+      updateCloudStatus("disconnected", "Sin permisos de guardado");
+      showToast(
+        "Supabase devolvio 401. Ejecuta supabase-fix-401-anon.sql en SQL Editor.",
+        "error"
+      );
+    } else {
+      updateCloudStatus("disconnected", "Error al guardar");
+    }
+    return false;
+  } finally {
+    saveInProgress = false;
   }
 }
 
 async function cleanOldBackups(weekKey) {
   if (!db) return;
   try {
-    const snapshot = await db
-      .collection("backups")
-      .where("weekKey", "==", weekKey)
-      .orderBy("savedAt", "desc")
-      .get();
+    const { data: rows, error } = await db
+      .from("backups")
+      .select("id")
+      .eq("week_key", weekKey)
+      .order("saved_at", { ascending: false });
 
-    const docs = snapshot.docs;
-    if (docs.length > 50) {
-      // Eliminar los más viejos (todo después del índice 50)
-      const toDelete = docs.slice(50);
-      const batch = db.batch();
-      toDelete.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
+    if (error || !rows || rows.length <= 50) return;
+
+    const idsToDelete = rows.slice(50).map((r) => r.id);
+    if (idsToDelete.length > 0) {
+      await db.from("backups").delete().in("id", idsToDelete);
     }
   } catch (e) {
     /* ignorar errores de limpieza */
@@ -216,19 +286,23 @@ async function loadFromCloud() {
   if (!db || !firebaseConnected) return null;
   const key = generateWeekKey();
   try {
-    const doc = await db.collection("weeks").doc(key).get();
-    if (doc.exists) {
-      return JSON.parse(doc.data().data);
-    }
+    const { data: row, error } = await db
+      .from("weeks")
+      .select("data")
+      .eq("week_key", key)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (row && row.data) return row.data;
   } catch (e) {
     /* ignore */
   }
   return null;
 }
 
-async function loadDataFromFirebase() {
+async function loadDataFromCloud() {
   // Cargar tarifas primero
-  await loadRatesFromFirebase();
+  await loadRatesFromCloud();
 
   const cloud = await loadFromCloud();
   if (cloud) {
@@ -240,6 +314,9 @@ async function loadDataFromFirebase() {
   }
   firebaseLoadComplete = true;
   lastSavedDataStr = JSON.stringify(weekData); // no hacer backup del estado inicial
+
+  await flushPendingCloudSync();
+
   renderAll();
   updateLastSaved();
 }
@@ -249,7 +326,7 @@ async function loadDataFromFirebase() {
 // ==========================================
 async function showBackupsPanel() {
   if (!db || !firebaseConnected) {
-    showToast("Sin conexión a Firebase", "error");
+    showToast("Sin conexión a la nube", "error");
     return;
   }
 
@@ -257,14 +334,13 @@ async function showBackupsPanel() {
   showToast("Cargando backups...", "info");
 
   try {
-    const snapshot = await db
-      .collection("backups")
-      .where("weekKey", "==", key)
-      .orderBy("savedAt", "desc")
-      .limit(50)
-      .get();
-
-    const docs = snapshot.docs;
+    const { data: docs, error } = await db
+      .from("backups")
+      .select("id, data, saved_at")
+      .eq("week_key", key)
+      .order("saved_at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
 
     let html = "<h2>🗄️ Backups de esta semana</h2>";
     html +=
@@ -276,8 +352,7 @@ async function showBackupsPanel() {
     } else {
       html += '<div style="max-height:400px;overflow-y:auto;">';
       docs.forEach((doc, i) => {
-        const d = doc.data();
-        const parsed = JSON.parse(d.data);
+        const parsed = doc.data || {};
         // Contar entradas con datos
         let filledEntries = 0;
         EMPLOYEES.forEach((emp) => {
@@ -298,7 +373,9 @@ async function showBackupsPanel() {
           "</div>";
         html +=
           '<div style="color:#94a3b8;font-size:0.8rem;margin-top:3px;">' +
-          d.savedAtReadable +
+          new Date(doc.saved_at).toLocaleString("es-CR", {
+            timeZone: "America/Costa_Rica",
+          }) +
           "</div>";
         html +=
           '<div style="color:#60a5fa;font-size:0.75rem;margin-top:2px;">' +
@@ -328,12 +405,19 @@ async function restoreBackup(backupDocId) {
   )
     return;
   try {
-    const doc = await db.collection("backups").doc(backupDocId).get();
-    if (!doc.exists) {
+    const backupId = Number(backupDocId);
+    const { data: row, error } = await db
+      .from("backups")
+      .select("data")
+      .eq("id", backupId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!row) {
       showToast("Backup no encontrado", "error");
       return;
     }
-    weekData = JSON.parse(doc.data().data);
+    weekData = row.data || {};
     initWeekData();
     const key = generateWeekKey();
     await saveToCloud(key, weekData);
@@ -418,13 +502,23 @@ function saveRates() {
   });
 
   if (changed) {
-    // Guardar tarifas en Firebase
+    // Guardar tarifas en la nube
     if (db && firebaseConnected) {
       const rates = {};
       EMPLOYEES.forEach((emp) => {
         rates[emp.id] = emp.rate;
       });
-      db.collection("config").doc("rates").set({ rates, updatedAt: Date.now() });
+      db.from("config")
+        .upsert({
+          key: "rates",
+          value: rates,
+          updated_at: new Date().toISOString(),
+        })
+        .then(({ error }) => {
+          if (error) {
+            showToast("No se pudo guardar tarifas en la nube", "error");
+          }
+        });
     }
     renderAll();
     document.querySelector(".modal-overlay").remove();
@@ -435,12 +529,18 @@ function saveRates() {
   }
 }
 
-async function loadRatesFromFirebase() {
+async function loadRatesFromCloud() {
   if (!db || !firebaseConnected) return;
   try {
-    const doc = await db.collection("config").doc("rates").get();
-    if (doc.exists) {
-      const rates = doc.data().rates;
+    const { data: row, error } = await db
+      .from("config")
+      .select("value")
+      .eq("key", "rates")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (row && row.value) {
+      const rates = row.value;
       EMPLOYEES.forEach((emp) => {
         if (rates[emp.id] !== undefined) {
           emp.rate = rates[emp.id];
@@ -577,25 +677,32 @@ function updateLastSaved() {
     now.getMinutes().toString().padStart(2, "0");
 }
 
-function autoSave() {
-  // ← PROTECCIÓN: no guardar hasta que Firebase haya cargado los datos
+async function autoSave() {
+  // ← PROTECCIÓN: no guardar hasta que la nube haya cargado los datos
   if (!firebaseLoadComplete) return;
 
   collectCurrentDayFromDOM();
   const key = generateWeekKey();
+
   if (firebaseConnected) {
-    saveToCloud(key, weekData);
+    await saveToCloud(key, weekData);
+    await flushPendingCloudSync();
   }
 }
 
-function manualSave() {
+async function manualSave() {
   collectCurrentDayFromDOM();
   const key = generateWeekKey();
+
   if (firebaseConnected) {
-    saveToCloud(key, weekData);
-    showToast("💾 Datos guardados y backup creado", "success");
+    const ok = await saveToCloud(key, weekData);
+    if (ok) {
+      showToast("💾 Datos guardados y backup creado", "success");
+    } else {
+      showToast("No se pudo guardar en nube. Reintentando...", "error");
+    }
   } else {
-    showToast("Sin conexión a Firebase. Intente de nuevo.", "error");
+    showToast("Sin conexión a la nube. No se guardó.", "error");
   }
 }
 
@@ -773,8 +880,9 @@ function onTimeChange(empId) {
   updateWeeklySummary();
   renderWeekDots();
 
+  const key = generateWeekKey();
+
   if (firebaseConnected && firebaseLoadComplete) {
-    const key = generateWeekKey();
     saveToCloud(key, weekData);
   }
 }
@@ -1083,34 +1191,23 @@ async function init() {
   initWeekData();
   renderAll();
 
-  // Conectar Firebase, cargar tarifas y datos
-  initializeFirebase();
+  // Conectar base de datos en la nube, cargar tarifas y datos
+  await initializeFirebase();
 
   // Auto-guardado cada 5 segundos
   // PROTEGIDO: solo guarda si firebaseLoadComplete === true
   autoSaveInterval = setInterval(autoSave, 5000);
+
+  window.addEventListener("online", async () => {
+    await flushPendingCloudSync();
+  });
 
   window.addEventListener("beforeunload", () => {
     if (!firebaseLoadComplete) return; // no guardar si no cargó
     collectCurrentDayFromDOM();
     if (firebaseConnected) {
       const key = generateWeekKey();
-      navigator.sendBeacon &&
-        db &&
-        fetch(
-          "https://firestore.googleapis.com/v1/projects/programa-horas-trabajo/databases/(default)/documents/weeks/" +
-            key,
-          {
-            method: "PATCH",
-            body: JSON.stringify({
-              fields: {
-                data: { stringValue: JSON.stringify(weekData) },
-                updatedAt: { integerValue: Date.now().toString() },
-              },
-            }),
-            keepalive: true,
-          }
-        );
+      saveToCloud(key, weekData);
     }
   });
 }
