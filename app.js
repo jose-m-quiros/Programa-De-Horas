@@ -93,10 +93,13 @@ let db = null;
 let firebaseConnected = false;
 let firebaseLoadComplete = false; // ← NUEVO: bloquea auto-save hasta cargar
 let autoSaveInterval = null;
+let cloudRefreshInterval = null;
 let expandedCards = {};
 let lastSavedDataStr = null; // ← rastrea el último dato guardado
+let lastCloudUpdatedAt = null;
 let saveInProgress = false;
 let pendingCloudSync = null;
+let cloudRealtimeChannel = null;
 
 function queuePendingCloudSync(weekKey, data) {
   pendingCloudSync = {
@@ -177,6 +180,8 @@ async function testFirebaseConnection() {
     firebaseConnected = true;
     updateCloudStatus("connected", "Nube conectada");
     await loadDataFromCloud();
+    setupCloudRealtimeSync();
+    startCloudRefreshFallback();
   } catch (e) {
     firebaseConnected = false;
     firebaseLoadComplete = true; // permitir guardar aunque falle
@@ -241,6 +246,7 @@ async function saveToCloud(key, data) {
       cleanOldBackups(key);
     }
 
+    lastCloudUpdatedAt = nowIso;
     updateCloudStatus("connected", "Nube sincronizada ✓");
     updateLastSaved();
     return true;
@@ -288,12 +294,12 @@ async function loadFromCloud() {
   try {
     const { data: row, error } = await db
       .from("weeks")
-      .select("data")
+      .select("data, updated_at")
       .eq("week_key", key)
       .maybeSingle();
 
     if (error) throw error;
-    if (row && row.data) return row.data;
+    if (row && row.data) return row;
   } catch (e) {
     /* ignore */
   }
@@ -304,9 +310,10 @@ async function loadDataFromCloud() {
   // Cargar tarifas primero
   await loadRatesFromCloud();
 
-  const cloud = await loadFromCloud();
-  if (cloud) {
-    weekData = cloud;
+  const cloudRow = await loadFromCloud();
+  if (cloudRow && cloudRow.data) {
+    weekData = cloudRow.data;
+    lastCloudUpdatedAt = cloudRow.updated_at || null;
     initWeekData();
   } else {
     weekData = {};
@@ -319,6 +326,103 @@ async function loadDataFromCloud() {
 
   renderAll();
   updateLastSaved();
+}
+
+function setupCloudRealtimeSync() {
+  if (!db || !firebaseConnected) return;
+
+  if (cloudRealtimeChannel) {
+    db.removeChannel(cloudRealtimeChannel);
+    cloudRealtimeChannel = null;
+  }
+
+  const key = generateWeekKey();
+  cloudRealtimeChannel = db
+    .channel("weeks-sync-" + key)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "weeks",
+        filter: "week_key=eq." + key,
+      },
+      (payload) => {
+        const row = payload && payload.new;
+        if (!row || !row.data) return;
+
+        const incomingStr = JSON.stringify(row.data);
+        if (incomingStr === lastSavedDataStr) return;
+
+        weekData = row.data;
+        initWeekData();
+        lastSavedDataStr = incomingStr;
+        lastCloudUpdatedAt = row.updated_at || lastCloudUpdatedAt;
+        renderAll();
+        updateLastSaved();
+        showToast("Datos actualizados desde la nube", "info");
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "config",
+        filter: "key=eq.rates",
+      },
+      (payload) => {
+        const row = payload && payload.new;
+        if (!row || !row.value) return;
+
+        EMPLOYEES.forEach((emp) => {
+          if (row.value[emp.id] !== undefined) {
+            emp.rate = row.value[emp.id];
+          }
+        });
+        renderAll();
+      }
+    )
+    .subscribe();
+}
+
+function startCloudRefreshFallback() {
+  if (cloudRefreshInterval) {
+    clearInterval(cloudRefreshInterval);
+    cloudRefreshInterval = null;
+  }
+
+  cloudRefreshInterval = setInterval(async () => {
+    if (!db || !firebaseConnected || saveInProgress) return;
+
+    try {
+      const key = generateWeekKey();
+      const { data: row, error } = await db
+        .from("weeks")
+        .select("data, updated_at")
+        .eq("week_key", key)
+        .maybeSingle();
+
+      if (error || !row || !row.data) return;
+
+      if (lastCloudUpdatedAt && row.updated_at <= lastCloudUpdatedAt) return;
+
+      const incomingStr = JSON.stringify(row.data);
+      if (incomingStr === lastSavedDataStr) {
+        lastCloudUpdatedAt = row.updated_at || lastCloudUpdatedAt;
+        return;
+      }
+
+      weekData = row.data;
+      initWeekData();
+      lastSavedDataStr = incomingStr;
+      lastCloudUpdatedAt = row.updated_at || lastCloudUpdatedAt;
+      renderAll();
+      updateLastSaved();
+    } catch (e) {
+      /* ignore polling errors */
+    }
+  }, 8000);
 }
 
 // ==========================================
@@ -1200,6 +1304,8 @@ async function init() {
 
   window.addEventListener("online", async () => {
     await flushPendingCloudSync();
+    setupCloudRealtimeSync();
+    startCloudRefreshFallback();
   });
 
   window.addEventListener("beforeunload", () => {
